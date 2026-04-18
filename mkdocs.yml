@@ -1,0 +1,37 @@
+site_name: rlm-logger
+site_description: Git bisect for production incidents. Recursive-LM agent for log analysis.
+site_url: https://rlm.sh/docs
+repo_url: https://github.com/Exorust/rlm-logger
+repo_name: Exorust/rlm-logger
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: deep orange
+    accent: deep orange
+  font:
+    text: Inter Tight
+    code: JetBrains Mono
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Case File Protocol: case-file.md
+  - Tools: tools.md
+  - BYO Model: models.md
+  - Eval Harness: eval.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
