@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/viewer-hero.png" alt="Sleuth case file viewer" width="760">
+  <img src="docs/img/hero.png" alt="Sleuth — harness the power of Recursive Language Models" width="820">
 </p>
 
 <h1 align="center">Sleuth</h1>
@@ -37,6 +37,10 @@ Every run writes one `case.sleuth.json`: the question, every step the agent took
 > checkout-worker is still presenting stripe_api_key version 6 to payment-gateway after vault rotated the secret to version 7 at 02:58:04 UTC. payment-gateway subscribed to the rotation webhook and flipped to v7 instantly… checkout-worker did not subscribe and caches the secret in-process with no SIGHUP handler.
 
 That's a real root cause from `examples/checkout-incident/`. [Open it in the viewer →](https://exorust.github.io/sleuth/viewer/)
+
+<p align="center">
+  <img src="docs/img/viewer-hero.png" alt="Sleuth case file viewer" width="760">
+</p>
 
 ## How it works
 
