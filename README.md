@@ -1,6 +1,28 @@
-# rlm-logger
+<p align="center">
+  <img src="docs/img/viewer-hero.png" alt="rlm-logger case file viewer" width="760">
+</p>
 
-**Git bisect for production incidents.** Point it at your logs, ask a question in English, get back a signed case file with a root cause, cited evidence, and a confidence score.
+<h1 align="center">rlm-logger</h1>
+
+<p align="center"><strong>Git bisect for production incidents.</strong></p>
+<p align="center">Turn 4 hours of Splunk scrollback into a 90-second RCA draft.<br>Runs locally. BYO model. Apache-2.0.</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/rlm-logger/"><img src="https://img.shields.io/pypi/v/rlm-logger?color=ff6b3d&label=pypi" alt="PyPI"></a>
+  <a href="https://github.com/Exorust/rlm-logger/actions/workflows/ci.yml"><img src="https://github.com/Exorust/rlm-logger/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Exorust/rlm-logger/actions/workflows/docs.yml"><img src="https://github.com/Exorust/rlm-logger/actions/workflows/docs.yml/badge.svg" alt="Docs"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://exorust.github.io/rlm-logger/viewer/"><strong>Live demo →</strong></a> &nbsp;·&nbsp;
+  <a href="https://exorust.github.io/rlm-logger/">Docs</a> &nbsp;·&nbsp;
+  <a href="https://exorust.github.io/rlm-logger/quickstart/">Quickstart</a>
+</p>
+
+---
+
+## Try it
 
 ```bash
 pip install rlm-logger
@@ -8,15 +30,20 @@ export ANTHROPIC_API_KEY=...
 rlm ask "why did checkout fail around 3am?" --logs ./logs/
 ```
 
-## Why
+## What you get
 
-When an incident hits, you don't need a dashboard. You need an answer. `rlm-logger` is a [DSPy RLM](https://github.com/stanfordnlp/dspy)-style agent that writes Python, runs it inside a sandboxed REPL over your logs, and recursively narrows down the cause. It stops when it can submit a structured `IncidentReport` or when it runs out of budget.
+Every run writes one `case.rlm.json`: the question, every step the agent took, the root cause it landed on, the log lines it cited, a confidence score. Self-contained, replayable, small enough to paste into a Slack thread.
 
-Every run produces a **case file**: one self-contained JSON document with the question, the full trajectory, the evidence cited (with ±3 lines of context), and the termination reason. Share it. Replay it. Grade it.
+> checkout-worker is still presenting stripe_api_key version 6 to payment-gateway after vault rotated the secret to version 7 at 02:58:04 UTC. payment-gateway subscribed to the rotation webhook and flipped to v7 instantly… checkout-worker did not subscribe and caches the secret in-process with no SIGHUP handler.
 
-## What the agent can do
+That's a real root cause from `examples/checkout-incident/`. [Open it in the viewer →](https://exorust.github.io/rlm-logger/viewer/)
 
-Five read-only query primitives plus two side channels, all sandboxed:
+## How it works
+
+A DSPy RLM-style agent with 5 read-only query tools over a DuckDB event store, plus a side LLM for judgement calls. Writes Python. Runs it sandboxed. Iterates. Terminates by submitting an `IncidentReport` or blowing the budget.
+
+<details>
+<summary>Full tool surface</summary>
 
 - `schema()` — services, levels, time window, row count
 - `top_errors(limit=20)` — loudest failure modes
@@ -26,55 +53,22 @@ Five read-only query primitives plus two side channels, all sandboxed:
 - `llm_query(question, context="")` — ask a secondary LLM a judgement question
 - `submit_incident_report(report)` — terminal, validated against schema
 
-The loop is: LLM emits a python code block → we exec it → feed stdout back → repeat until `submit_incident_report` or budget exhaustion.
+The loop: LLM emits Python → we exec it → feed stdout back → repeat until `submit_incident_report` or budget exhaustion.
+</details>
 
-## Works with your log platform
+## Works with
 
-Auto-detects exports from **Splunk**, **Datadog**, **New Relic**, and **Honeycomb** out of the box. Click Export in the tool you already pay for, point rlm-logger at the file, ask a question. No connectors, no API keys. See the [integration docs](https://exorust.github.io/rlm-logger/quickstart/#bring-your-own-logs).
-
-## BYO model
-
-Anything LiteLLM supports:
-
-```bash
-rlm ask "..." --logs ./logs --model anthropic/claude-sonnet-4-6
-rlm ask "..." --logs ./logs --model openai/gpt-5
-rlm ask "..." --logs ./logs --model ollama/llama3.2
-rlm ask "..." --logs ./logs --model bedrock/anthropic.claude-sonnet-4-6-v1:0
-```
-
-## Reference fixture
-
-`examples/checkout-incident/` is a 72-row, 5-service fixture: a Stripe API key rotation that cascades into 5xx errors on the checkout worker. It ships with:
-
-- 5 ground-truth events (the causal chain)
-- 5 distractors (plausible-but-unrelated events: redis blip, db pool pressure, feature flag reload, subscription retry, unrelated 429)
-- An ideal trajectory any decent agent should match
-
-Run the eval:
-
-```bash
-pytest eval/test_checkout_fixture.py -v
-```
-
-The eval enforces two gates: **evidence overlap ≥ 0.5** (cited the right events) and **distractor hits == 0** (didn't chase red herrings).
-
-## Case file viewer
-
-`viewer/` is an Astro site that renders any case file: trajectory with per-step tool badges, evidence cards with redacted context lines, confidence dial, ground-truth diff.
-
-```bash
-cd viewer && npm install && npm run dev
-```
-
-## Safety
-
-Every log line passes through a secret redactor at ingest time: Bearer tokens, Stripe/AWS/GitHub/Slack keys, JWTs, and SSH private keys are stripped before anything touches the agent. Case files never carry raw secrets.
+- **Log platforms** — auto-detects exports from **Splunk**, **Datadog**, **New Relic**, **Honeycomb**. Click Export, point rlm-logger at the file, done. Or feed it raw `.jsonl` / `.log` / `.gz`. [Integration guides →](https://exorust.github.io/rlm-logger/quickstart/#bring-your-own-logs)
+- **Models** — anything LiteLLM speaks: Claude, GPT, Llama, Bedrock, Ollama. One flag, no lock-in.
+- **Security** — secrets redacted at ingest (Bearer, Stripe, AWS, GitHub, Slack, JWT, SSH) before anything touches the LLM. Logs never leave your box.
 
 ## Docs
 
-Full docs at [exorust.github.io/rlm-logger](https://exorust.github.io/rlm-logger/).
+[**exorust.github.io/rlm-logger**](https://exorust.github.io/rlm-logger/) · [Live viewer](https://exorust.github.io/rlm-logger/viewer/) · [Reference incident](examples/checkout-incident/) · [PyPI](https://pypi.org/project/rlm-logger/)
 
-## License
+---
 
-Apache-2.0.
+<p align="center">
+  If rlm-logger saves you a postmortem, <a href="https://github.com/Exorust/rlm-logger/stargazers">give it a star</a>. That's how I know it's worth pushing.<br>
+  <sub>Apache-2.0.</sub>
+</p>
